@@ -45,11 +45,15 @@ pub fn triangle_mesh<'a>(device: &Device, allocator: &mut Allocator) -> MeshBuff
             linear: true,
         })
         .unwrap();
-	unsafe { device.bind_buffer_memory(buffer, allocation.memory(), allocation.offset()).unwrap() };
-	unsafe {
-		let ptr = allocation.mapped_ptr().unwrap().cast::<Vertex>().as_ptr();
-		std::ptr::copy_nonoverlapping(triangle.as_ptr(), ptr, std::mem::size_of::<Vertex>() * 3);
-	}
+    unsafe {
+        device
+            .bind_buffer_memory(buffer, allocation.memory(), allocation.offset())
+            .unwrap()
+    };
+    unsafe {
+        let ptr = allocation.mapped_ptr().unwrap().cast::<Vertex>().as_ptr();
+        std::ptr::copy_nonoverlapping(triangle.as_ptr(), ptr, std::mem::size_of::<Vertex>() * 3);
+    }
     MeshBuffer {
         buffer,
         meshes: Some(vec![Mesh {

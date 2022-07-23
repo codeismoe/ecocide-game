@@ -14,6 +14,7 @@ pkgs.mkShell {
     vulkan-extension-layer
 
     xorg.libX11
+    renderdoc
   ];
 
   buildInputs = with pkgs; [ rust-analyzer ];
