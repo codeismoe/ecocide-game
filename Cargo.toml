@@ -13,3 +13,4 @@ anyhow = "1.0.58"
 mint = "0.5.9"
 gpu-allocator = "0.18.0"
 memoffset = { version = "0.6", features = ["unstable_const"] }
+tobj = "3.2.3"

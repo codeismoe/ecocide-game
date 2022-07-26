@@ -14,7 +14,7 @@ use ash::{
 
 use winit::window::Window;
 
-use crate::mesh::{triangle_mesh, MeshBuffer};
+use crate::mesh::{monkey_mesh, MeshBuffer};
 use crate::pipeline::{build_pipeline, shader_stage_create_info, PushConstant};
 
 pub struct VkEngine {
@@ -269,7 +269,7 @@ impl VkEngine {
             })
             .unwrap();
 
-            let meshes = triangle_mesh(&device, &mut allocator);
+            let meshes = monkey_mesh(&device, &mut allocator);
             VkEngine {
                 entry,
                 instance,
@@ -396,9 +396,6 @@ impl VkEngine {
                 vk::PipelineBindPoint::GRAPHICS,
                 self.pipeline,
             );
-            let buffers = [self.meshes.buffer];
-            let offets = [0];
-
             let scissor = vk::Rect2D {
                 offset: vk::Offset2D { x: 0, y: 0 },
                 extent: self.surface_resolution,
@@ -413,30 +410,30 @@ impl VkEngine {
             };
             let scissors = [scissor];
             let viewports = [viewport];
-            let qrot: Quaternion<f32> = cgmath::Rotation3::from_axis_angle(
-                Vector3::new(0f32, 1f32, 0f32),
-                cgmath::Rad(0.03f32 * self.frame_count as f32),
-            );
-
-            let rot: Matrix4<f32> = qrot.into();
-            let camera = cgmath::Matrix4::from_translation(Vector3::new(0f32, 0f32, -2f32));
-            let push_constant = std::mem::transmute::<PushConstant, [u8; 80]>(PushConstant {
-                data: Vector4::<f32>::new(0f32, 0f32, 0f32, 0f32),
-                render_matrix: cgmath::perspective(
-                    cgmath::Deg(70f32),
-                    800f32 / 600f32,
-                    0.1f32,
-                    200f32,
-                ) * camera
-                    * rot,
-            });
-
             self.device
                 .cmd_set_viewport(self.command_buffer, 0, &viewports);
             self.device
                 .cmd_set_scissor(self.command_buffer, 0, &scissors);
-            self.device
-                .cmd_bind_vertex_buffers(self.command_buffer, 0, &buffers, &offets);
+
+            let buffers = [self.meshes.buffer];
+            let offsets = [0];
+			self.device
+                .cmd_bind_vertex_buffers(self.command_buffer, 0, &buffers, &offsets);
+
+            let qrot: Quaternion<f32> = cgmath::Rotation3::from_axis_angle(
+                Vector3::new(0f32, 1f32, 0f32),
+                cgmath::Rad(0.03f32 * self.frame_count as f32),
+            );
+            let model: Matrix4<f32> = qrot.into();
+            let view = cgmath::Matrix4::from_translation(Vector3::new(0f32, 0f32, -2f32));
+            let mut projection =
+                cgmath::perspective(cgmath::Deg(90f32), 800f32 / 600f32, 0.1f32, 200f32);
+			projection[1][1] *= -1f32;
+            let push_constant = std::mem::transmute::<PushConstant, [u8; 80]>(PushConstant {
+                data: Vector4::<f32>::new(0f32, 0f32, 0f32, 0f32),
+                render_matrix: projection * view * model,
+            });
+
             self.device.cmd_push_constants(
                 self.command_buffer,
                 self.pipeline_layout,
@@ -445,7 +442,8 @@ impl VkEngine {
                 &push_constant,
             );
 
-            self.device.cmd_draw(self.command_buffer, 3, 1, 0, 0);
+            self.device
+                .cmd_draw(self.command_buffer, self.meshes.vertex_count, 1, 0, 0);
 
             self.device.cmd_end_render_pass(self.command_buffer);
             self.device.end_command_buffer(self.command_buffer).unwrap();
